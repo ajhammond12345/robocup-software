@@ -20,6 +20,10 @@ import main
 # continously during the execution of a given state.
 class WhichHalf(play.Play):
     class State(enum.Enum):
+        start = 0
+        top = 1
+        bottom = 2
+
         # Define your states here.
         # eg: some_state = 0
         # -----------------------
@@ -28,6 +32,32 @@ class WhichHalf(play.Play):
     def __init__(self):
         super().__init__(continuous=True)
 
+        self.add_state(WhichHalf.State.top,
+            behavior.Behavior.State.running)
+        self.add_state(WhichHalf.State.bottom,
+            behavior.Behavior.State.running)
+
+        self.add_transition(behavior.Behavior.State.start, 
+            self.State.bottom,
+            lambda: True,
+            'immediately')
+        self.add_transition(self.State.bottom, 
+            self.State.top,
+            lambda: main.ball().pos.y > constants.Field.Length / 2,
+            'Ball went to top')
+        self.add_transition(self.State.top, 
+            self.State.bottom,
+            lambda: main.ball().pos.y < constants.Field.Length / 2,
+            'Ball went to bottom')
+
+
+    def on_enter_top(self):
+        print("Entering Top")
+    def on_enter_bottom(self):
+        print("Entering Bottom")
+
+    def execute_top(self):
+        print("Ball Y cor: ", main.ball().pos.y)
         # Register the states you defined using 'add_state'.
         # eg: self.add_state(WhichHalf.State.<???>,
         #                    behavior.Behavior.State.running)

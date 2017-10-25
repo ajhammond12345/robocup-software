@@ -7,6 +7,7 @@ import tactics.coordinated_pass
 import constants
 import main
 import enum
+import role_assignment
 
 # Goals
 # 1. Move robots into the shape of a triangle
@@ -28,6 +29,7 @@ class TrianglePass(play.Play):
 
         # register states - they're both substates of "running"
         # Feel free to modify these transitions if you would like to use the state
+        
         # machine system to your advantage!
         self.add_state(TrianglePass.State.setup,
                        behavior.Behavior.State.running)
@@ -46,15 +48,16 @@ class TrianglePass(play.Play):
 
         # Define any member variables you need here:
         # Eg:
-        # self.triangle_points = [<point 1>, <point 2>, <point 3>]
+        self.triangle_points = [robocup.Point(-1.0, 2.0), robocup.Point(1.0, 2.0), robocup.Point(0.0, 3.0)]
+        self.point_to_pass = 0
 
     def on_enter_setup(self):
         # Add subbehaviors to place robots in a triangle
         #
         # Send two robots to corners of triangle, and one to 'capture' the ball
-        # self.add_subbehavior(skills.move.Move(<POINT>), 'move1')
-        # self.add_subbehavior(skills.move.Move(<POINT>), 'move2')
-        # self.add_subbehavior(skills.capture.Capture(), 'capture')
+        p1 = self.add_subbehavior(skills.move.Move(self.triangle_points[0]), 'move1')
+        p2 = self.add_subbehavior(skills.move.Move(self.triangle_points[1]), 'move2')
+        #c1 =self.add_subbehavior(skills.capture.Capture(), 'capture')
         pass
 
     def on_exit_setup(self):
@@ -65,14 +68,33 @@ class TrianglePass(play.Play):
         # Remember this function is getting called continuously, so we don't want to add subbehaviors
         # if they are already present
 
+        shouldAdd = 0
         # <Check to see if subbehaviors are done, if they are, remove them, so we can kick again>
 
         # Don't add subbehaviors if we have added them in the previous loop
         if not self.has_subbehaviors():
             # Add a subbehavior to pass the ball to another robot!
-            # self.add_subbehavior(tactics.coordinated_pass.CoordinatedPass(<KICK_TARGET_POINT>), 'pass')
+            if shouldAdd == 0:
+                self.add_subbehavior(tactics.coordinated_pass.CoordinatedPass(self.triangle_points[self.point_to_pass]), 'pass')
+                self.point_to_pass += 1
+                if self.point_to_pass == 3:
+                    self.point_to_pass = 0
+                shouldAdd = 1
             pass
+        else:
+            if self.all_subbehaviors()[0].is_done_running():
+                self.remove_all_subbehaviors()
+                shouldAdd = 0
+            
 
     def on_exit_passing(self):
         # clean up!
         self.remove_all_subbehaviors()
+
+    def role_requirements(self):
+        reqs = super().role_requirements()
+        print(reqs)
+        for req in role_assignment.iterate_role_requirements_tree_leaves(reqs):
+            req.robot_change_cost = 1.0
+        return reqs
+
